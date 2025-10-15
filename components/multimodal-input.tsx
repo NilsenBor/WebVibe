@@ -43,6 +43,7 @@ import {
 import { SuggestedActions } from "./suggested-actions";
 import { CategorySelector, type CategoryType } from "./category-selector";
 import { Button } from "./ui/button";
+import { toast } from "./toast";
 import type { VisibilityType } from "./visibility-selector";
 
 function PureMultimodalInput({
@@ -159,26 +160,48 @@ function PureMultimodalInput({
 
   const getCategoryName = useCallback((category: CategoryType): string => {
     const categoryNames: Record<CategoryType, string> = {
-      "New Clients": "Новые клиенты",
-      "Technical Support": "Техническая поддержка",
-      "Products Maps": "Продукты - Карты",
-      "Products Credits": "Продукты - Кредиты",
-      "Products Deposits": "Продукты - Вклады",
-      "Private Clients": "Частные клиенты"
+      "Новые клиенты": "Новые клиенты",
+      "Техническая поддержка": "Техническая поддержка",
+      "Продукты - Карты": "Продукты - Карты",
+      "Продукты - Кредиты": "Продукты - Кредиты",
+      "Продукты - Вклады": "Продукты - Вклады",
+      "Частные клиенты": "Частные клиенты"
     };
     return categoryNames[category] || category;
   }, []);
 
   const submitForm = useCallback(async () => {
-    // Save message to SessionStorage
-    const sessionManager = SessionStorageManager.getInstance();
-    sessionManager.addMessage(input);
-
     // Get selected category from session storage
+    const sessionManager = SessionStorageManager.getInstance();
     const selectedCategory = sessionManager.getSelectedCategory();
     
-    // Send question to question service if category is selected
-    if (selectedCategory && input.trim()) {
+    // Check if category is selected
+    if (!selectedCategory) {
+      toast({
+        type: "error",
+        description: "Пожалуйста, выберите категорию перед отправкой сообщения",
+      });
+      return;
+    }
+    
+    // Check if input is not empty
+    if (!input.trim()) {
+      return;
+    }
+
+    // First, send user message
+    sendMessage({
+      role: "user",
+      parts: [
+        {
+          type: "text",
+          text: input,
+        },
+      ],
+    });
+
+    // Then send question to question service and add response
+    if (input.trim()) {
       try {
         const questionRequest: QuestionRequest = {
           message: input,
@@ -188,7 +211,7 @@ function PureMultimodalInput({
         const response = await questionService.askQuestion(questionRequest);
         console.log("Question sent to question service:", questionRequest);
         
-        // Add response from question service to chat immediately
+        // Add response from question service to chat after user message
         if (response.success && response.answer) {
           const assistantMessage = {
             id: crypto.randomUUID(),
@@ -217,15 +240,6 @@ function PureMultimodalInput({
       }
     }
 
-    sendMessage({
-      role: "user",
-      parts: [
-        {
-          type: "text",
-          text: input,
-        },
-      ],
-    });
     setLocalStorageInput("");
     resetHeight();
     setInput("");
@@ -248,10 +262,18 @@ function PureMultimodalInput({
     <div className={cn("relative flex w-full flex-col gap-4", className)}>
       {/* Category Selection */}
       {!selectedCategory && (
-          <CategorySelector
-            onCategorySelect={handleCategorySelect}
-            selectedCategory={selectedCategory}
-          />
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-sm font-medium">
+                <InfoIcon size={16} />
+                <span>Пожалуйста, выберите категорию для начала общения</span>
+              </div>
+            </div>
+            <CategorySelector
+              onCategorySelect={handleCategorySelect}
+              selectedCategory={selectedCategory}
+            />
+          </div>
         )}
 
       {/* Category Info and Controls */}
@@ -320,7 +342,7 @@ function PureMultimodalInput({
                 <SuggestedActions
                   chatId={chatId}
                   selectedVisibilityType={selectedVisibilityType}
-                  sendMessage={sendMessage}
+                  setMessages={setMessages}
                   selectedCategory={selectedCategory}
                 />
               </motion.div>
@@ -346,7 +368,7 @@ function PureMultimodalInput({
             maxHeight={200}
             minHeight={32}
             onChange={handleInput}
-            placeholder="Send a message..."
+            placeholder={selectedCategory ? "Отправить сообщение..." : "Сначала выберите категорию..."}
             ref={textareaRef}
             rows={1}
             value={input}
@@ -361,7 +383,7 @@ function PureMultimodalInput({
           ) : (
             <PromptInputSubmit
               className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
-              disabled={!input.trim()}
+              disabled={!input.trim() || !selectedCategory}
               status={status}
             >
               <ArrowUpIcon size={14} />

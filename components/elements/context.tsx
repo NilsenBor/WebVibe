@@ -140,23 +140,23 @@ export const Context = ({ className, usage, ...props }: ContextProps) => {
             {usage?.cachedInputTokens && usage.cachedInputTokens > 0 && (
               <InfoRow
                 costText={usage?.costUSD?.cacheReadUSD?.toString()}
-                label="Cache Hits"
+                label="Попадания в кэш"
                 tokens={usage?.cachedInputTokens}
               />
             )}
             <InfoRow
               costText={usage?.costUSD?.inputUSD?.toString()}
-              label="Input"
+              label="Ввод"
               tokens={usage?.inputTokens}
             />
             <InfoRow
               costText={usage?.costUSD?.outputUSD?.toString()}
-              label="Output"
+              label="Вывод"
               tokens={usage?.outputTokens}
             />
             <InfoRow
               costText={usage?.costUSD?.reasoningUSD?.toString()}
-              label="Reasoning"
+              label="Рассуждение"
               tokens={
                 usage?.reasoningTokens && usage.reasoningTokens > 0
                   ? usage.reasoningTokens

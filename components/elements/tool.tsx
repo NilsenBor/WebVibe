@@ -36,10 +36,10 @@ export type ToolHeaderProps = {
 
 const getStatusBadge = (status: ToolUIPart["state"]) => {
   const labels = {
-    "input-streaming": "Pending",
-    "input-available": "Running",
-    "output-available": "Completed",
-    "output-error": "Error",
+    "input-streaming": "Ожидание",
+    "input-available": "Выполнение",
+    "output-available": "Завершено",
+    "output-error": "Ошибка",
   } as const;
 
   const icons = {
@@ -129,7 +129,7 @@ export const ToolOutput = ({
   return (
     <div className={cn("space-y-2 p-4", className)} {...props}>
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-        {errorText ? "Error" : "Result"}
+        {errorText ? "Ошибка" : "Результат"}
       </h4>
       <div
         className={cn(

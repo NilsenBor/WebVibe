@@ -43,14 +43,14 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     });
 
     toast.promise(deletePromise, {
-      loading: "Deleting all chats...",
+      loading: "Удаление всех чатов...",
       success: () => {
         mutate(unstable_serialize(getChatHistoryPaginationKey));
         router.push("/");
         setShowDeleteAllDialog(false);
-        return "All chats deleted successfully";
+        return "Все чаты успешно удалены";
       },
-      error: "Failed to delete all chats",
+      error: "Не удалось удалить все чаты",
     });
   };
 

@@ -12,29 +12,11 @@ export class QuestionServiceImpl implements QuestionService {
     const requestId = generateUUID();
     const startTime = Date.now();      
 
-    console.log("🚀 [QuestionService] Starting request:", {
-      requestId,
-      message: request.message,
-      category: request.category,
-      baseUrl: this.baseUrl,
-      timestamp: new Date().toISOString()
-    });
-
     try {      
       const requestBody = {
         message: request.message,
         category: request.category,
-      };
-      
-      console.log("📤 [QuestionService] Sending request to server:", {
-        requestId,
-        url: `${this.baseUrl}/api/question`,
-        requestBody,
-        headers: {
-          "Content-Type": "application/json",
-        }
-      });
-            
+      };            
       const response = await fetch(`${this.baseUrl}/api/question`, {
         method: "POST",
         headers: {
@@ -45,22 +27,10 @@ export class QuestionServiceImpl implements QuestionService {
       
       const duration = Date.now() - startTime;
       
-      console.log("📥 [QuestionService] Received response from server:", {
-        requestId,
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        duration: `${duration}ms`,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-      
       if (response.ok) {
         const data = await response.json();
-        console.log("✅ [QuestionService] Response data received:", {
-          requestId,
-          data,
-          dataStringified: JSON.stringify(data, null, 2)
-        });
+        console.log(`[QuestionService] Request ${requestId} completed in ${duration}ms:`, data);
+        console.log('data.answer', JSON.stringify(data));
         
         const result = {
           success: true,

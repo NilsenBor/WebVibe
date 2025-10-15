@@ -15,12 +15,12 @@ import {
 } from "@/components/icons";
 
 export type CategoryType = 
-  | "New Clients" 
-  | "Technical Support" 
-  | "Products Maps" 
-  | "Products Credits" 
-  | "Products Deposits" 
-  | "Private Clients";
+  | "Новые клиенты" 
+  | "Техническая поддержка" 
+  | "Продукты - Карты" 
+  | "Продукты - Кредиты" 
+  | "Продукты - Вклады" 
+  | "Частные клиенты" 
 
 interface Category {
   id: CategoryType;
@@ -37,42 +37,42 @@ interface CategorySelectorProps {
 
 const categories: Category[] = [
   {
-    id: "New Clients",
+    id: "Новые клиенты",
     name: "Новые клиенты",
     description: "Информация для новых пользователей",
     icon: <UsersIcon />,
     color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
   },
   {
-    id: "Technical Support",
+    id: "Техническая поддержка",
     name: "Техническая поддержка",
     description: "Решение технических вопросов",
     icon: <MessageIcon />,
     color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
   },
   {
-    id: "Products Maps",
+    id: "Продукты - Карты",
     name: "Продукты - Карты",
     description: "Банковские карты и платежи",
     icon: <RouteIcon />,
     color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
   },
   {
-    id: "Products Credits",
+    id: "Продукты - Кредиты",
     name: "Продукты - Кредиты",
     description: "Кредитные продукты и услуги",
     icon: <FileIcon />,
     color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
   },
   {
-    id: "Products Deposits",
+    id: "Продукты - Вклады",
     name: "Продукты - Вклады",
     description: "Депозитные продукты и сбережения",
     icon: <PlusIcon />,
     color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
   },
   {
-    id: "Private Clients",
+    id: "Частные клиенты",
     name: "Частные клиенты",
     description: "Персональные банковские услуги",
     icon: <UserIcon />,

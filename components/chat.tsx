@@ -25,7 +25,6 @@ import { ChatSDKError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
 import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
-import { SessionStorageManager } from "@/lib/session-storage";
 import { Artifact } from "./artifact";
 import { useDataStream } from "./data-stream-provider";
 import { Messages } from "./messages";
@@ -146,29 +145,7 @@ export function Chat({
 
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
   
-  // Initialize SessionStorage manager
-  const sessionManager = SessionStorageManager.getInstance();
-
-  // Load messages from SessionStorage on component mount
-  useEffect(() => {
-    const storedMessages = sessionManager.getMessages();
-    if (storedMessages.length > 0) {
-      // Convert stored messages to ChatMessage format
-      const chatMessages: ChatMessage[] = storedMessages.map((msg) => ({
-        id: msg.MessageId,
-        role: "user" as const,
-        parts: [{ type: "text" as const, text: msg.content }],
-        createdAt: new Date(),
-      }));
-      
-      // Add to existing messages if not already present
-      setMessages((currentMessages) => {
-        const existingIds = new Set(currentMessages.map(m => m.id));
-        const newMessages = chatMessages.filter(m => !existingIds.has(m.id));
-        return [...currentMessages, ...newMessages];
-      });
-    }
-  }, [sessionManager, setMessages]);
+  // Removed SessionStorage message loading - no longer needed
 
   useAutoResume({
     autoResume,

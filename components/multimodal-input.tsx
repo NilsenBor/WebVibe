@@ -4,6 +4,7 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import { Trigger } from "@radix-ui/react-select";
 import type { UIMessage } from "ai";
 import equal from "fast-deep-equal";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   type ChangeEvent,
   type Dispatch,
@@ -24,7 +25,8 @@ import { chatModels } from "@/lib/ai/models";
 import { myProvider } from "@/lib/ai/providers";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
-import { cn } from "@/lib/utils";
+import { cn, generateUUID } from "@/lib/utils";
+import { SessionStorageManager } from "@/lib/session-storage";
 import { Context } from "./elements/context";
 import {
   PromptInput,
@@ -39,11 +41,13 @@ import {
   ArrowUpIcon,
   ChevronDownIcon,
   CpuIcon,
+  InfoIcon,
   PaperclipIcon,
   StopIcon,
 } from "./icons";
 import { PreviewAttachment } from "./preview-attachment";
 import { SuggestedActions } from "./suggested-actions";
+import { CategorySelector, type CategoryType } from "./category-selector";
 import { Button } from "./ui/button";
 import type { VisibilityType } from "./visibility-selector";
 
@@ -85,7 +89,7 @@ function PureMultimodalInput({
 
   const adjustHeight = useCallback(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = "44px";
+      textareaRef.current.style.height = "32px";
     }
   }, []);
 
@@ -97,7 +101,7 @@ function PureMultimodalInput({
 
   const resetHeight = useCallback(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = "44px";
+      textareaRef.current.style.height = "32px";
     }
   }, []);
 
@@ -124,13 +128,63 @@ function PureMultimodalInput({
 
   const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value);
+    // Auto-resize will be handled by the PromptInputTextarea component
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
+  const [showSuggestedActions, setShowSuggestedActions] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
+
+  // Load category from SessionStorage on mount
+  useEffect(() => {
+    const sessionManager = SessionStorageManager.getInstance();
+    const savedCategory = sessionManager.getSelectedCategory();
+    if (savedCategory) {
+      setSelectedCategory(savedCategory as CategoryType);
+      // Auto-open template questions if category is already selected
+      setShowSuggestedActions(true);
+    }
+  }, []);
+
+  const handleCategorySelect = useCallback((category: CategoryType) => {
+    setSelectedCategory(category);
+    const sessionManager = SessionStorageManager.getInstance();
+    sessionManager.setSelectedCategory(category);
+    // Auto-open template questions when category is selected
+    setShowSuggestedActions(true);
+  }, []);
+
+  // Show suggested actions after message is sent if category is selected
+  useEffect(() => {
+    if (selectedCategory && messages.length > 0) {
+      setShowSuggestedActions(true);
+    }
+  }, [selectedCategory, messages.length]);
+
+  const handleBackToCategorySelection = useCallback(() => {
+    setSelectedCategory(null);
+    setShowSuggestedActions(false);
+    const sessionManager = SessionStorageManager.getInstance();
+    sessionManager.resetCategorySelection();
+  }, []);
+
+  const getCategoryName = useCallback((category: CategoryType): string => {
+    const categoryNames: Record<CategoryType, string> = {
+      "new-clients": "Новые клиенты",
+      "technical-support": "Техническая поддержка",
+      "products-maps": "Продукты - Карты",
+      "products-credits": "Продукты - Кредиты",
+      "products-deposits": "Продукты - Вклады",
+      "private-clients": "Частные клиенты"
+    };
+    return categoryNames[category] || category;
+  }, []);
 
   const submitForm = useCallback(() => {
-    window.history.replaceState({}, "", `/chat/${chatId}`);
+    // Save message to SessionStorage
+    const sessionManager = SessionStorageManager.getInstance();
+    sessionManager.addMessage(input);
 
     sendMessage({
       role: "user",
@@ -195,6 +249,7 @@ function PureMultimodalInput({
     }
   }, []);
 
+
   const _modelResolver = useMemo(() => {
     return myProvider.languageModel(selectedModelId);
   }, [selectedModelId]);
@@ -234,17 +289,95 @@ function PureMultimodalInput({
 
   return (
     <div className={cn("relative flex w-full flex-col gap-4", className)}>
-      {messages.length === 0 &&
-        attachments.length === 0 &&
-        uploadQueue.length === 0 && (
-          <SuggestedActions
-            chatId={chatId}
-            selectedVisibilityType={selectedVisibilityType}
-            sendMessage={sendMessage}
+      {/* Category Selection */}
+      {attachments.length === 0 &&
+        uploadQueue.length === 0 &&
+        !selectedCategory && (
+          <CategorySelector
+            onCategorySelect={handleCategorySelect}
+            selectedCategory={selectedCategory}
           />
         )}
 
+      {/* Category Info and Controls */}
+      {attachments.length === 0 &&
+        uploadQueue.length === 0 &&
+        selectedCategory && (
+          <div className="space-y-3">
+            {/* Selected Category Info */}
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm">
+                <InfoIcon size={14} />
+                <span>Выбрана категория: {getCategoryName(selectedCategory)}</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-center gap-2">
+              {showSuggestedActions && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSuggestedActions(false)}
+                  className="flex items-center gap-2"
+                >
+                  <InfoIcon size={16} />
+                  Скрыть шаблоны
+                  <div className="rotate-180">
+                    <ChevronDownIcon size={16} />
+                  </div>
+                </Button>
+              )}
+
+              {!showSuggestedActions && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSuggestedActions(true)}
+                  className="flex items-center gap-2"
+                >
+                  <InfoIcon size={16} />
+                  Показать шаблоны
+                  <ChevronDownIcon size={16} />
+                </Button>
+              )}
+
+              <Button
+                variant="ghost"
+                onClick={handleBackToCategorySelection}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <ArrowUpIcon size={16} className="rotate-90" />
+                Изменить категорию
+              </Button>
+            </div>
+          </div>
+        )}
+
+      {/* Suggested Actions with Animation */}
+      {attachments.length === 0 &&
+        uploadQueue.length === 0 && (
+          <AnimatePresence mode="wait">
+            {showSuggestedActions && (
+              <motion.div
+                key="suggested-actions"
+                initial={{ opacity: 0, height: 0, y: -20 }}
+                animate={{ opacity: 1, height: "auto", y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -20 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="overflow-hidden mb-4"
+              >
+                <SuggestedActions
+                  chatId={chatId}
+                  selectedVisibilityType={selectedVisibilityType}
+                  sendMessage={sendMessage}
+                  selectedCategory={selectedCategory}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+
       <input
+        accept=".jpg,.jpeg,.png,.csv,.xls,.xlsx,.docx,.pdf"
         className="-top-4 -left-4 pointer-events-none fixed size-0.5 opacity-0"
         multiple
         onChange={handleFileChange}
@@ -297,21 +430,21 @@ function PureMultimodalInput({
             ))}
           </div>
         )}
+
         <div className="flex flex-row items-start gap-1 sm:gap-2">
           <PromptInputTextarea
             autoFocus
             className="grow resize-none border-0! border-none! bg-transparent p-2 text-sm outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
             data-testid="multimodal-input"
-            disableAutoResize={true}
+            disableAutoResize={false}
             maxHeight={200}
-            minHeight={44}
+            minHeight={32}
             onChange={handleInput}
             placeholder="Send a message..."
             ref={textareaRef}
             rows={1}
             value={input}
           />{" "}
-          <Context {...contextProps} />
         </div>
         <PromptInputToolbar className="!border-top-0 border-t-0! p-0 shadow-none dark:border-0 dark:border-transparent!">
           <PromptInputTools className="gap-0 sm:gap-0.5">
@@ -319,11 +452,7 @@ function PureMultimodalInput({
               fileInputRef={fileInputRef}
               selectedModelId={selectedModelId}
               status={status}
-            />
-            <ModelSelectorCompact
-              onModelChange={onModelChange}
-              selectedModelId={selectedModelId}
-            />
+            />            
           </PromptInputTools>
 
           {status === "submitted" ? (
@@ -436,18 +565,7 @@ function PureModelSelectorCompact({
         </span>
         <ChevronDownIcon size={16} />
       </Trigger>
-      <PromptInputModelSelectContent className="min-w-[260px] p-0">
-        <div className="flex flex-col gap-px">
-          {chatModels.map((model) => (
-            <SelectItem key={model.id} value={model.name}>
-              <div className="truncate font-medium text-xs">{model.name}</div>
-              <div className="mt-px truncate text-[10px] text-muted-foreground leading-tight">
-                {model.description}
-              </div>
-            </SelectItem>
-          ))}
-        </div>
-      </PromptInputModelSelectContent>
+      
     </PromptInputModelSelect>
   );
 }

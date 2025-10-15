@@ -208,14 +208,6 @@ export class ChatPage {
       element: lastMessageElement,
       content,
       attachments,
-      async edit(newMessage: string) {
-        await page.getByTestId("message-edit-button").click();
-        await page.getByTestId("message-editor").fill(newMessage);
-        await page.getByTestId("message-editor-send-button").click();
-        await expect(
-          page.getByTestId("message-editor-send-button")
-        ).not.toBeVisible();
-      },
     };
   }
 

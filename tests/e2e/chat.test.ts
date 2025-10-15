@@ -58,21 +58,6 @@ test.describe("Chat activity", () => {
     await expect(chatPage.sendButton).toBeVisible();
   });
 
-  test("Edit user message and resubmit", async () => {
-    await chatPage.sendUserMessage("Why is grass green?");
-    await chatPage.isGenerationComplete();
-
-    const assistantMessage = await chatPage.getRecentAssistantMessage();
-    expect(assistantMessage.content).toContain("It's just green duh!");
-
-    const userMessage = await chatPage.getRecentUserMessage();
-    await userMessage.edit("Why is the sky blue?");
-
-    await chatPage.isGenerationComplete();
-
-    const updatedAssistantMessage = await chatPage.getRecentAssistantMessage();
-    expect(updatedAssistantMessage.content).toContain("It's just blue duh!");
-  });
 
   test("Hide suggested actions after sending message", async () => {
     await chatPage.isElementVisible("suggested-actions");

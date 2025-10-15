@@ -17,25 +17,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  // Авторизация отключена - пропускаем все проверки
+  // const token = await getToken({
+  //   req: request,
+  //   secret: process.env.AUTH_SECRET,
+  //   secureCookie: !isDevelopmentEnvironment,
+  // });
 
-  if (!token) {
-    const redirectUrl = encodeURIComponent(request.url);
+  // if (!token) {
+  //   const redirectUrl = encodeURIComponent(request.url);
 
-    return NextResponse.redirect(
-      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
-    );
-  }
+  //   return NextResponse.redirect(
+  //     new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
+  //   );
+  // }
 
-  const isGuest = guestRegex.test(token?.email ?? "");
+  // const isGuest = guestRegex.test(token?.email ?? "");
 
-  if (token && !isGuest && ["/login", "/register"].includes(pathname)) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
+  // if (token && !isGuest && ["/login", "/register"].includes(pathname)) {
+  //   return NextResponse.redirect(new URL("/", request.url));
+  // }
 
   return NextResponse.next();
 }

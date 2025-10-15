@@ -1,2 +1,2 @@
-// biome-ignore lint/performance/noBarrelFile: "Required"
-export { GET, POST } from "@/app/(auth)/auth";
+// Authentication disabled - export mock handlers
+export { handlers } from "@/app/(auth)/auth";

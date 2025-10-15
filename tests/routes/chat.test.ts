@@ -25,11 +25,11 @@ function normalizeStreamData(lines: string[]): string[] {
 }
 
 test.describe
-  .serial("/api/chat", () => {
+  .serial("/api/question", () => {
     test("Ada cannot invoke a chat generation with empty request body", async ({
       adaContext,
     }) => {
-      const response = await adaContext.request.post("/api/chat", {
+      const response = await adaContext.request.post("/api/question", {
         data: JSON.stringify({}),
       });
       expect(response.status()).toBe(400);
@@ -42,7 +42,7 @@ test.describe
     test("Ada can invoke chat generation", async ({ adaContext }) => {
       const chatId = generateUUID();
 
-      const response = await adaContext.request.post("/api/chat", {
+      const response = await adaContext.request.post("/api/question", {
         data: {
           id: chatId,
           message: TEST_PROMPTS.SKY.MESSAGE,
@@ -71,7 +71,7 @@ test.describe
     }) => {
       const [chatId] = chatIdsCreatedByAda;
 
-      const response = await babbageContext.request.post("/api/chat", {
+      const response = await babbageContext.request.post("/api/question", {
         data: {
           id: chatId,
           message: TEST_PROMPTS.GRASS.MESSAGE,
@@ -90,7 +90,7 @@ test.describe
       const [chatId] = chatIdsCreatedByAda;
 
       const response = await babbageContext.request.delete(
-        `/api/chat?id=${chatId}`
+        `/api/question?id=${chatId}`
       );
       expect(response.status()).toBe(403);
 
@@ -103,7 +103,7 @@ test.describe
       const [chatId] = chatIdsCreatedByAda;
 
       const response = await adaContext.request.delete(
-        `/api/chat?id=${chatId}`
+        `/api/question?id=${chatId}`
       );
       expect(response.status()).toBe(200);
 
@@ -115,7 +115,7 @@ test.describe
       adaContext,
     }) => {
       const response = await adaContext.request.get(
-        `/api/chat/${generateUUID()}/stream`
+        `/api/question/${generateUUID()}/stream`
       );
       expect(response.status()).toBe(404);
     });
@@ -123,7 +123,7 @@ test.describe
     test("Ada can resume chat generation", async ({ adaContext }) => {
       const chatId = generateUUID();
 
-      const firstRequest = adaContext.request.post("/api/chat", {
+      const firstRequest = adaContext.request.post("/api/question", {
         data: {
           id: chatId,
           message: {
@@ -146,7 +146,7 @@ test.describe
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const secondRequest = adaContext.request.get(
-        `/api/chat/${chatId}/stream`
+        `/api/question/${chatId}/stream`
       );
 
       const [firstResponse, secondResponse] = await Promise.all([
@@ -177,7 +177,7 @@ test.describe
     }) => {
       const chatId = generateUUID();
 
-      const firstRequest = await adaContext.request.post("/api/chat", {
+      const firstRequest = await adaContext.request.post("/api/question", {
         data: {
           id: chatId,
           message: {
@@ -198,7 +198,7 @@ test.describe
       });
 
       const secondRequest = adaContext.request.get(
-        `/api/chat/${chatId}/stream`
+        `/api/question/${chatId}/stream`
       );
 
       const [firstResponse, secondResponse] = await Promise.all([
@@ -227,7 +227,7 @@ test.describe
     }) => {
       const chatId = generateUUID();
 
-      const firstResponse = await adaContext.request.post("/api/chat", {
+      const firstResponse = await adaContext.request.post("/api/question", {
         data: {
           id: chatId,
           message: {
@@ -254,7 +254,7 @@ test.describe
       await new Promise((resolve) => setTimeout(resolve, 15 * 1000));
       await new Promise((resolve) => setTimeout(resolve, 15_000));
       const secondResponse = await adaContext.request.get(
-        `/api/chat/${chatId}/stream`
+        `/api/question/${chatId}/stream`
       );
 
       const secondStatusCode = secondResponse.status();
@@ -270,7 +270,7 @@ test.describe
     }) => {
       const chatId = generateUUID();
 
-      const firstRequest = adaContext.request.post("/api/chat", {
+      const firstRequest = adaContext.request.post("/api/question", {
         data: {
           id: chatId,
           message: {
@@ -293,7 +293,7 @@ test.describe
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const secondRequest = babbageContext.request.get(
-        `/api/chat/${chatId}/stream`
+        `/api/question/${chatId}/stream`
       );
 
       const [firstResponse, secondResponse] = await Promise.all([
@@ -317,7 +317,7 @@ test.describe
       test.fixme();
       const chatId = generateUUID();
 
-      const firstRequest = adaContext.request.post("/api/chat", {
+      const firstRequest = adaContext.request.post("/api/question", {
         data: {
           id: chatId,
           message: {
@@ -340,7 +340,7 @@ test.describe
       await new Promise((resolve) => setTimeout(resolve, 10 * 1000));
 
       const secondRequest = babbageContext.request.get(
-        `/api/chat/${chatId}/stream`
+        `/api/question/${chatId}/stream`
       );
 
       const [firstResponse, secondResponse] = await Promise.all([

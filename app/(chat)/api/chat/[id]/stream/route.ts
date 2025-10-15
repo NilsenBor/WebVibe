@@ -28,11 +28,8 @@ export async function GET(
     return new ChatSDKError("bad_request:api").toResponse();
   }
 
+  // Authentication disabled - skip auth checks
   const session = await auth();
-
-  if (!session?.user) {
-    return new ChatSDKError("unauthorized:chat").toResponse();
-  }
 
   let chat: Chat | null;
 
@@ -46,9 +43,10 @@ export async function GET(
     return new ChatSDKError("not_found:chat").toResponse();
   }
 
-  if (chat.visibility === "private" && chat.userId !== session.user.id) {
-    return new ChatSDKError("forbidden:chat").toResponse();
-  }
+  // Skip user ownership check when auth is disabled
+  // if (chat.visibility === "private" && chat.userId !== session.user.id) {
+  //   return new ChatSDKError("forbidden:chat").toResponse();
+  // }
 
   const streamIds = await getStreamIdsByChatId({ chatId });
 

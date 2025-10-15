@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
-import { guestRegex, isDevelopmentEnvironment } from "./lib/constants";
+// Authentication disabled - removed auth imports
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -46,9 +45,6 @@ export const config = {
     "/",
     "/chat/:id",
     "/api/:path*",
-    "/login",
-    "/register",
-
     /*
      * Match all request paths except for the ones starting with:
      * - _next/static (static files)

@@ -26,11 +26,8 @@ const FileSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  // Authentication disabled - skip auth checks
   const session = await auth();
-
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   if (request.body === null) {
     return new Response("Request body is empty", { status: 400 });

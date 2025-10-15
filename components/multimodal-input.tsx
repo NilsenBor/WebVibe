@@ -3,10 +3,8 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { Trigger } from "@radix-ui/react-select";
 import type { UIMessage } from "ai";
-import equal from "fast-deep-equal";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  type ChangeEvent,
+import {  
   type Dispatch,
   memo,
   type SetStateAction,
@@ -17,21 +15,19 @@ import {
   useRef,
   useState,
 } from "react";
-import { toast } from "sonner";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
 import { saveChatModelAsCookie } from "@/app/(chat)/actions";
-import { SelectItem } from "@/components/ui/select";
 import { chatModels } from "@/lib/ai/models";
 import { myProvider } from "@/lib/ai/providers";
-import type { Attachment, ChatMessage } from "@/lib/types";
+import type { ChatMessage } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
-import { cn, generateUUID } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { SessionStorageManager } from "@/lib/session-storage";
-import { Context } from "./elements/context";
+import { questionService } from "@/service/question";
+import type { QuestionRequest } from "@/service/question/types";
 import {
   PromptInput,
-  PromptInputModelSelect,
-  PromptInputModelSelectContent,
+  PromptInputModelSelect,  
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputToolbar,
@@ -42,10 +38,8 @@ import {
   ChevronDownIcon,
   CpuIcon,
   InfoIcon,
-  PaperclipIcon,
   StopIcon,
 } from "./icons";
-import { PreviewAttachment } from "./preview-attachment";
 import { SuggestedActions } from "./suggested-actions";
 import { CategorySelector, type CategoryType } from "./category-selector";
 import { Button } from "./ui/button";
@@ -57,8 +51,6 @@ function PureMultimodalInput({
   setInput,
   status,
   stop,
-  attachments,
-  setAttachments,
   messages,
   setMessages,
   sendMessage,
@@ -73,8 +65,6 @@ function PureMultimodalInput({
   setInput: Dispatch<SetStateAction<string>>;
   status: UseChatHelpers<ChatMessage>["status"];
   stop: () => void;
-  attachments: Attachment[];
-  setAttachments: Dispatch<SetStateAction<Attachment[]>>;
   messages: UIMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
@@ -131,8 +121,6 @@ function PureMultimodalInput({
     // Auto-resize will be handled by the PromptInputTextarea component
   };
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadQueue, setUploadQueue] = useState<string[]>([]);
   const [showSuggestedActions, setShowSuggestedActions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
 
@@ -171,38 +159,73 @@ function PureMultimodalInput({
 
   const getCategoryName = useCallback((category: CategoryType): string => {
     const categoryNames: Record<CategoryType, string> = {
-      "new-clients": "Новые клиенты",
-      "technical-support": "Техническая поддержка",
-      "products-maps": "Продукты - Карты",
-      "products-credits": "Продукты - Кредиты",
-      "products-deposits": "Продукты - Вклады",
-      "private-clients": "Частные клиенты"
+      "New Clients": "Новые клиенты",
+      "Technical Support": "Техническая поддержка",
+      "Products Maps": "Продукты - Карты",
+      "Products Credits": "Продукты - Кредиты",
+      "Products Deposits": "Продукты - Вклады",
+      "Private Clients": "Частные клиенты"
     };
     return categoryNames[category] || category;
   }, []);
 
-  const submitForm = useCallback(() => {
+  const submitForm = useCallback(async () => {
     // Save message to SessionStorage
     const sessionManager = SessionStorageManager.getInstance();
     sessionManager.addMessage(input);
 
+    // Get selected category from session storage
+    const selectedCategory = sessionManager.getSelectedCategory();
+    
+    // Send question to question service if category is selected
+    if (selectedCategory && input.trim()) {
+      try {
+        const questionRequest: QuestionRequest = {
+          message: input,
+          category: selectedCategory,
+        };
+        
+        const response = await questionService.askQuestion(questionRequest);
+        console.log("Question sent to question service:", questionRequest);
+        
+        // Add response from question service to chat immediately
+        if (response.success && response.answer) {
+          const assistantMessage = {
+            id: crypto.randomUUID(),
+            role: "assistant" as const,
+            parts: [{ type: "text" as const, text: response.answer }],
+          };
+          
+          console.log("💬 [MultimodalInput] Adding assistant message to chat:", {
+            messageId: assistantMessage.id,
+            role: assistantMessage.role,
+            textLength: assistantMessage.parts[0].text.length,
+            textPreview: assistantMessage.parts[0].text.substring(0, 50) + "..."
+          });
+          
+          setMessages((currentMessages) => {
+            const newMessages = [...currentMessages, assistantMessage];
+            console.log("✅ [MultimodalInput] Messages updated:", {
+              totalMessages: newMessages.length,
+              lastMessageRole: newMessages[newMessages.length - 1]?.role
+            });
+            return newMessages;
+          });
+        }
+      } catch (error) {
+        console.error("Error sending question to service:", error);
+      }
+    }
+
     sendMessage({
       role: "user",
       parts: [
-        ...attachments.map((attachment) => ({
-          type: "file" as const,
-          url: attachment.url,
-          name: attachment.name,
-          mediaType: attachment.contentType,
-        })),
         {
           type: "text",
           text: input,
         },
       ],
     });
-
-    setAttachments([]);
     setLocalStorageInput("");
     resetHeight();
     setInput("");
@@ -213,86 +236,18 @@ function PureMultimodalInput({
   }, [
     input,
     setInput,
-    attachments,
     sendMessage,
-    setAttachments,
+    setMessages,
     setLocalStorageInput,
     width,
     chatId,
     resetHeight,
   ]);
 
-  const uploadFile = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const response = await fetch("/api/files/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const { url, pathname, contentType } = data;
-
-        return {
-          url,
-          name: pathname,
-          contentType,
-        };
-      }
-      const { error } = await response.json();
-      toast.error(error);
-    } catch (_error) {
-      toast.error("Failed to upload file, please try again!");
-    }
-  }, []);
-
-
-  const _modelResolver = useMemo(() => {
-    return myProvider.languageModel(selectedModelId);
-  }, [selectedModelId]);
-
-  const contextProps = useMemo(
-    () => ({
-      usage,
-    }),
-    [usage]
-  );
-
-  const handleFileChange = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(event.target.files || []);
-
-      setUploadQueue(files.map((file) => file.name));
-
-      try {
-        const uploadPromises = files.map((file) => uploadFile(file));
-        const uploadedAttachments = await Promise.all(uploadPromises);
-        const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) => attachment !== undefined
-        );
-
-        setAttachments((currentAttachments) => [
-          ...currentAttachments,
-          ...successfullyUploadedAttachments,
-        ]);
-      } catch (error) {
-        console.error("Error uploading files!", error);
-      } finally {
-        setUploadQueue([]);
-      }
-    },
-    [setAttachments, uploadFile]
-  );
-
   return (
     <div className={cn("relative flex w-full flex-col gap-4", className)}>
       {/* Category Selection */}
-      {attachments.length === 0 &&
-        uploadQueue.length === 0 &&
-        !selectedCategory && (
+      {!selectedCategory && (
           <CategorySelector
             onCategorySelect={handleCategorySelect}
             selectedCategory={selectedCategory}
@@ -300,9 +255,7 @@ function PureMultimodalInput({
         )}
 
       {/* Category Info and Controls */}
-      {attachments.length === 0 &&
-        uploadQueue.length === 0 &&
-        selectedCategory && (
+      {selectedCategory && (
           <div className="space-y-3">
             {/* Selected Category Info */}
             <div className="text-center">
@@ -353,8 +306,7 @@ function PureMultimodalInput({
         )}
 
       {/* Suggested Actions with Animation */}
-      {attachments.length === 0 &&
-        uploadQueue.length === 0 && (
+      {(
           <AnimatePresence mode="wait">
             {showSuggestedActions && (
               <motion.div
@@ -376,60 +328,14 @@ function PureMultimodalInput({
           </AnimatePresence>
         )}
 
-      <input
-        accept=".jpg,.jpeg,.png,.csv,.xls,.xlsx,.docx,.pdf"
-        className="-top-4 -left-4 pointer-events-none fixed size-0.5 opacity-0"
-        multiple
-        onChange={handleFileChange}
-        ref={fileInputRef}
-        tabIndex={-1}
-        type="file"
-      />
 
       <PromptInput
         className="rounded-xl border border-border bg-background p-3 shadow-xs transition-all duration-200 focus-within:border-border hover:border-muted-foreground/50"
         onSubmit={(event) => {
           event.preventDefault();
-          if (status !== "ready") {
-            toast.error("Please wait for the model to finish its response!");
-          } else {
-            submitForm();
-          }
+          submitForm();
         }}
       >
-        {(attachments.length > 0 || uploadQueue.length > 0) && (
-          <div
-            className="flex flex-row items-end gap-2 overflow-x-scroll"
-            data-testid="attachments-preview"
-          >
-            {attachments.map((attachment) => (
-              <PreviewAttachment
-                attachment={attachment}
-                key={attachment.url}
-                onRemove={() => {
-                  setAttachments((currentAttachments) =>
-                    currentAttachments.filter((a) => a.url !== attachment.url)
-                  );
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = "";
-                  }
-                }}
-              />
-            ))}
-
-            {uploadQueue.map((filename) => (
-              <PreviewAttachment
-                attachment={{
-                  url: "",
-                  name: filename,
-                  contentType: "",
-                }}
-                isUploading={true}
-                key={filename}
-              />
-            ))}
-          </div>
-        )}
 
         <div className="flex flex-row items-start gap-1 sm:gap-2">
           <PromptInputTextarea
@@ -448,11 +354,6 @@ function PureMultimodalInput({
         </div>
         <PromptInputToolbar className="!border-top-0 border-t-0! p-0 shadow-none dark:border-0 dark:border-transparent!">
           <PromptInputTools className="gap-0 sm:gap-0.5">
-            <AttachmentsButton
-              fileInputRef={fileInputRef}
-              selectedModelId={selectedModelId}
-              status={status}
-            />            
           </PromptInputTools>
 
           {status === "submitted" ? (
@@ -460,7 +361,7 @@ function PureMultimodalInput({
           ) : (
             <PromptInputSubmit
               className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
-              disabled={!input.trim() || uploadQueue.length > 0}
+              disabled={!input.trim()}
               status={status}
             >
               <ArrowUpIcon size={14} />
@@ -481,9 +382,6 @@ export const MultimodalInput = memo(
     if (prevProps.status !== nextProps.status) {
       return false;
     }
-    if (!equal(prevProps.attachments, nextProps.attachments)) {
-      return false;
-    }
     if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
       return false;
     }
@@ -495,34 +393,6 @@ export const MultimodalInput = memo(
   }
 );
 
-function PureAttachmentsButton({
-  fileInputRef,
-  status,
-  selectedModelId,
-}: {
-  fileInputRef: React.MutableRefObject<HTMLInputElement | null>;
-  status: UseChatHelpers<ChatMessage>["status"];
-  selectedModelId: string;
-}) {
-  const isReasoningModel = selectedModelId === "chat-model-reasoning";
-
-  return (
-    <Button
-      className="aspect-square h-8 rounded-lg p-1 transition-colors hover:bg-accent"
-      data-testid="attachments-button"
-      disabled={status !== "ready" || isReasoningModel}
-      onClick={(event) => {
-        event.preventDefault();
-        fileInputRef.current?.click();
-      }}
-      variant="ghost"
-    >
-      <PaperclipIcon size={14} style={{ width: 14, height: 14 }} />
-    </Button>
-  );
-}
-
-const AttachmentsButton = memo(PureAttachmentsButton);
 
 function PureModelSelectorCompact({
   selectedModelId,

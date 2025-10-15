@@ -22,7 +22,7 @@ import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import type { Vote } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
-import type { Attachment, ChatMessage } from "@/lib/types";
+import type { ChatMessage } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
 import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
 import { SessionStorageManager } from "@/lib/session-storage";
@@ -30,7 +30,7 @@ import { Artifact } from "./artifact";
 import { useDataStream } from "./data-stream-provider";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
-import { getChatHistoryPaginationKey } from "./sidebar-history";
+// import { getChatHistoryPaginationKey } from "./sidebar-history";
 import { toast } from "./toast";
 import type { VisibilityType } from "./visibility-selector";
 
@@ -83,7 +83,7 @@ export function Chat({
     experimental_throttle: 100,
     generateId: generateUUID,
     transport: new DefaultChatTransport({
-      api: "/api/chat",
+      api: "/next/api/question",
       fetch: fetchWithErrorHandlers,
       prepareSendMessagesRequest(request) {
         return {
@@ -103,8 +103,10 @@ export function Chat({
         setUsage(dataPart.data);
       }
     },
-    onFinish: () => {
-      mutate(unstable_serialize(getChatHistoryPaginationKey));
+    onFinish: async (result) => {
+      // Removed question service logic - now handled in multimodal-input.tsx
+      // Removed history API call to reduce network clutter
+      // mutate(unstable_serialize(getChatHistoryPaginationKey));
     },
     onError: (error) => {
       if (error instanceof ChatSDKError) {
@@ -139,12 +141,9 @@ export function Chat({
     }
   }, [query, sendMessage, hasAppendedQuery, id]);
 
-  const { data: votes } = useSWR<Vote[]>(
-    messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
-    fetcher
-  );
+  // Removed votes API call to reduce network clutter
+  const votes = undefined;
 
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
   
   // Initialize SessionStorage manager
@@ -201,8 +200,7 @@ export function Chat({
 
         <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
           {!isReadonly && (
-            <MultimodalInput
-              attachments={attachments}
+            <MultimodalInput              
               chatId={id}
               input={input}
               messages={messages}
@@ -210,7 +208,6 @@ export function Chat({
               selectedModelId={currentModelId}
               selectedVisibilityType={visibilityType}
               sendMessage={sendMessage}
-              setAttachments={setAttachments}
               setInput={setInput}
               setMessages={setMessages}
               status={status}
@@ -222,7 +219,6 @@ export function Chat({
       </div>
 
       <Artifact
-        attachments={attachments}
         chatId={id}
         input={input}
         isReadonly={isReadonly}
@@ -231,7 +227,6 @@ export function Chat({
         selectedModelId={currentModelId}
         selectedVisibilityType={visibilityType}
         sendMessage={sendMessage}
-        setAttachments={setAttachments}
         setInput={setInput}
         setMessages={setMessages}
         status={status}

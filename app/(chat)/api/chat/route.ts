@@ -107,16 +107,15 @@ export async function POST(request: Request) {
       selectedVisibilityType: VisibilityType;
     } = requestBody;
 
+    // Authentication disabled - use mock session
     const session = await auth();
+    const userType: UserType = session?.user?.type || "guest";
 
-    if (!session?.user) {
-      return new ChatSDKError("unauthorized:chat").toResponse();
-    }
-
-    const userType: UserType = session.user.type;
-
+    // Skip rate limiting and user checks when auth is disabled
+    const userId = session?.user?.id || "mock-user-id";
+    
     const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
+      id: userId,
       differenceInHours: 24,
     });
 
@@ -127,9 +126,10 @@ export async function POST(request: Request) {
     const chat = await getChatById({ id });
 
     if (chat) {
-      if (chat.userId !== session.user.id) {
-        return new ChatSDKError("forbidden:chat").toResponse();
-      }
+      // Skip user ownership check when auth is disabled
+      // if (chat.userId !== session.user.id) {
+      //   return new ChatSDKError("forbidden:chat").toResponse();
+      // }
     } else {
       const title = await generateTitleFromUserMessage({
         message,
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
 
       await saveChat({
         id,
-        userId: session.user.id,
+        userId,
         title,
         visibility: selectedVisibilityType,
       });

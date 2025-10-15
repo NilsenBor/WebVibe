@@ -22,7 +22,7 @@ function PureSuggestedActions({ chatId, sendMessage, selectedCategory }: Suggest
   const itemsPerPage = 4; // Show 4 items per page (2x2 grid)
   
   const categoryQuestions: Record<CategoryType, string[]> = {
-    "new-clients": [
+    "New Clients": [
       "Как открыть банковский счет?",
       "Какие документы нужны для регистрации?",
       "Как получить банковскую карту?",
@@ -32,7 +32,7 @@ function PureSuggestedActions({ chatId, sendMessage, selectedCategory }: Suggest
       "Как получить консультацию?",
       "Какие услуги доступны онлайн?"
     ],
-    "technical-support": [
+    "Technical Support": [
       "Не работает мобильное приложение",
       "Забыл пароль от интернет-банка",
       "Не приходят SMS-уведомления",
@@ -42,7 +42,7 @@ function PureSuggestedActions({ chatId, sendMessage, selectedCategory }: Suggest
       "Не работает онлайн-платеж",
       "Проблемы с мобильным банкингом"
     ],
-    "products-maps": [
+    "Products Maps": [
       "Какие виды карт доступны?",
       "Как оформить кредитную карту?",
       "Какие лимиты по картам?",
@@ -52,7 +52,7 @@ function PureSuggestedActions({ chatId, sendMessage, selectedCategory }: Suggest
       "Проблемы с картой",
       "Как заменить карту?"
     ],
-    "products-credits": [
+    "Products Credits": [
       "Какие кредиты доступны?",
       "Как оформить потребительский кредит?",
       "Какие условия ипотеки?",
@@ -62,7 +62,7 @@ function PureSuggestedActions({ chatId, sendMessage, selectedCategory }: Suggest
       "Рефинансирование кредита",
       "Кредитная история"
     ],
-    "products-deposits": [
+    "Products Deposits": [
       "Какие вклады доступны?",
       "Как открыть депозит?",
       "Какие проценты по вкладам?",
@@ -72,7 +72,7 @@ function PureSuggestedActions({ chatId, sendMessage, selectedCategory }: Suggest
       "Налогообложение вкладов",
       "Страхование вкладов"
     ],
-    "private-clients": [
+    "Private Clients": [
       "Персональный менеджер",
       "VIP-обслуживание",
       "Инвестиционные продукты",

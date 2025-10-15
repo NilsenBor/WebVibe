@@ -18,11 +18,8 @@ export async function GET(request: Request) {
     ).toResponse();
   }
 
+  // Authentication disabled - skip auth checks
   const session = await auth();
-
-  if (!session?.user) {
-    return new ChatSDKError("unauthorized:document").toResponse();
-  }
 
   const documents = await getDocumentsById({ id });
 
@@ -32,9 +29,10 @@ export async function GET(request: Request) {
     return new ChatSDKError("not_found:document").toResponse();
   }
 
-  if (document.userId !== session.user.id) {
-    return new ChatSDKError("forbidden:document").toResponse();
-  }
+  // Skip user ownership check when auth is disabled
+  // if (document.userId !== session.user.id) {
+  //   return new ChatSDKError("forbidden:document").toResponse();
+  // }
 
   return Response.json(documents, { status: 200 });
 }
@@ -50,11 +48,9 @@ export async function POST(request: Request) {
     ).toResponse();
   }
 
+  // Authentication disabled - skip auth checks
   const session = await auth();
-
-  if (!session?.user) {
-    return new ChatSDKError("not_found:document").toResponse();
-  }
+  const userId = session?.user?.id || "mock-user-id";
 
   const {
     content,
@@ -68,9 +64,10 @@ export async function POST(request: Request) {
   if (documents.length > 0) {
     const [doc] = documents;
 
-    if (doc.userId !== session.user.id) {
-      return new ChatSDKError("forbidden:document").toResponse();
-    }
+    // Skip user ownership check when auth is disabled
+    // if (doc.userId !== session.user.id) {
+    //   return new ChatSDKError("forbidden:document").toResponse();
+    // }
   }
 
   const document = await saveDocument({
@@ -78,7 +75,7 @@ export async function POST(request: Request) {
     content,
     title,
     kind,
-    userId: session.user.id,
+    userId,
   });
 
   return Response.json(document, { status: 200 });
